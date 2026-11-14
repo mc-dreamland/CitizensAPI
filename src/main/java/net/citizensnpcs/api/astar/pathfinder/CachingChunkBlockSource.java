@@ -34,8 +34,8 @@ public abstract class CachingChunkBlockSource<T> extends BlockSource {
         int maxChunkX = maxX >> 4, maxChunkZ = maxZ >> 4;
 
         chunks = new Object[maxChunkX - chunkX + 1][maxChunkZ - chunkZ + 1];
-        for (int x = chunkX; x < maxChunkX; x++) {
-            for (int z = chunkZ; z < maxChunkZ; z++) {
+        for (int x = chunkX; x <= maxChunkX; x++) {
+            for (int z = chunkZ; z <= maxChunkZ; z++) {
                 chunks[x - chunkX][z - chunkZ] = getChunkObject(x, z);
             }
         }
@@ -113,7 +113,7 @@ public abstract class CachingChunkBlockSource<T> extends BlockSource {
         T obj;
     }
 
-    private static class ChunkCoord {
+    public static class ChunkCoord {
         int x, z;
 
         public ChunkCoord(int xx, int zz) {

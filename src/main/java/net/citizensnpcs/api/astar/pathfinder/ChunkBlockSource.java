@@ -1,5 +1,7 @@
 package net.citizensnpcs.api.astar.pathfinder;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -9,7 +11,8 @@ import org.bukkit.block.data.BlockData;
 
 import net.citizensnpcs.api.util.BoundingBox;
 
-public class ChunkBlockSource extends CachingChunkBlockSource<Chunk> {
+public class ChunkBlockSource extends CachingChunkBlockSource<CompletableFuture<Chunk>> {
+
     public ChunkBlockSource(Location location, float radius) {
         super(location, radius);
     }
@@ -19,30 +22,43 @@ public class ChunkBlockSource extends CachingChunkBlockSource<Chunk> {
     }
 
     @Override
-    protected BlockData getBlockData(Chunk chunk, int x, int y, int z) {
-        return chunk.getBlock(x & 15, y, z & 15).getBlockData();
+    protected BlockData getBlockData(CompletableFuture<Chunk> chunk, int x, int y, int z) {
+        Chunk load = chunk.getNow(null);
+        if (load == null)
+            return null;
+        return load.getBlock(x & 15, y, z & 15).getBlockData();
     }
 
     @Override
-    protected Chunk getChunkObject(int x, int z) {
-        return world.getChunkAt(x, z);
+    protected CompletableFuture<Chunk> getChunkObject(int x, int z) {
+        return world.getChunkAtAsync(x, z);
     }
 
     @Override
-    protected BoundingBox getCollisionBox(Chunk chunk, int x, int y, int z) {
+    protected BoundingBox getCollisionBox(CompletableFuture<Chunk> chunk, int x, int y, int z) {
         if (!SUPPORT_BOUNDING_BOX)
             return null;
-        return BoundingBox.convert(world.getBlockAt(x, y, z).getBoundingBox());
+        Chunk load = chunk.getNow(null);
+        if (load == null)
+            return BoundingBox.ONE.add(x, y, z);
+        return BoundingBox.convert(load.getBlock(x & 15, y, z & 15).getBoundingBox());
     }
 
     @Override
-    protected int getLightLevel(Chunk chunk, int x, int y, int z) {
-        return chunk.getBlock(x, y, z).getLightLevel();
+    protected int getLightLevel(CompletableFuture<Chunk> chunk, int x, int y, int z) {
+        Chunk load = chunk.getNow(null);
+        if (load == null)
+            return 0;
+        return load.getBlock(x, y, z).getLightLevel();
     }
 
     @Override
-    protected Material getType(Chunk chunk, int x, int y, int z) {
-        return SUPPORT_GET_TYPE ? world.getType(x, y, z) : chunk.getBlock(x & 15, y, z & 15).getType();
+    protected Material getType(CompletableFuture<Chunk> chunk, int x, int y, int z) {
+        Chunk load = chunk.getNow(null);
+        if (load == null)
+            return Material.BARRIER;
+        return SUPPORT_GET_TYPE ? world.getType(x, y, z)
+                : load.getBlock(x & 15, y, z & 15).getType();
     }
 
     private static boolean SUPPORT_BOUNDING_BOX = true;
